@@ -1,0 +1,256 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate			
+uniform float uAngle;
+uniform float uShape;
+uniform float uDistancex;
+uniform float uDistancey;
+
+void main()
+{
+
+	if (uShape == 1.0)
+	{
+	float sine = sin(uAngle);
+	float cosine = cos(uAngle);
+    gl_Position.x = cosine*aPosition.x - sine*aPosition.y;    //pass vertex coordinate to gl_Position
+	gl_Position.y = sine*aPosition.x + cosine*aPosition.y;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+	
+	gl_Position.x = gl_Position.x + 0.4;
+	gl_Position.y = gl_Position.y - 0.35;
+	}
+	
+	else if (uShape == 2.0)
+	{
+	float sine = sin(uAngle);
+	float cosine = cos(uAngle);
+    gl_Position.x = cosine*aPosition.x - sine*aPosition.y;    //pass vertex coordinate to gl_Position
+	gl_Position.y = sine*aPosition.x + cosine*aPosition.y;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+	
+	gl_Position.x = gl_Position.x - 0.4;
+	gl_Position.y = gl_Position.y - 0.35;
+	}
+	
+	else if (uShape == 3.0)
+	{
+	float sine = sin(uAngle);
+	float cosine = cos(uAngle);
+    gl_Position.x = -cosine*aPosition.x + sine*aPosition.y;    //pass vertex coordinate to gl_Position
+	gl_Position.y = -sine*aPosition.x - cosine*aPosition.y;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+	
+	gl_Position.x = gl_Position.x ;
+	gl_Position.y = gl_Position.y + 0.40;
+	
+	}
+	else if (uShape == 4.0)
+	{
+		gl_Position.x = aPosition.x + uDistancex;    //pass vertex 			coordinate to gl_Position
+		gl_Position.y = aPosition.y +uDistancey;
+		gl_Position.z = 0.0;
+		gl_Position.w = 1.0;
+		
+		gl_Position.x = gl_Position.x -0.9;
+		gl_Position.y = gl_Position.y + 0.125;
+	}
+	
+				//pass vertex color
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+uniform vec4 uColor;
+void main()
+{
+    gl_FragColor = uColor; //use varying fragment color
+}
+</script>
+
+<script>
+//main drawing function
+	var gl;
+	var uShape, uAngle, uDistancex, uDistancey, uColor;
+	var distanceX;
+	var distanceY;
+	var angle, angle2, angle3;
+	var bool = true;
+
+function main()
+{
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	var vertices = [];
+	makeTriangles(vec2(-0.3,-0.3),vec2(0.0,0.3),vec2(0.3,-0.3),5,vertices);
+	makeDisk(vertices, 0.0625, 100);
+	//buffer vertices into vertex buffer
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	//connect to uniform uAngle
+
+	uColor = gl.getUniformLocation(program, "uColor");
+	uAngle = gl.getUniformLocation(program, "uAngle");
+	uShape = gl.getUniformLocation(program, "uShape");
+	uDistancex = gl.getUniformLocation(program, "uDistancex");
+	uDistancey = gl.getUniformLocation(program, "uDistancey");
+	
+	//intial angle
+	gl.uniform4fv(uColor, flatten(vec4(0.0,1.0,0.0,0.0)));
+	angle = 0.0;
+	angle2 = 0.0;
+	angle3 = 0.0;
+	distanceX = 0.0;
+	distanceY = -1.0;
+	signX = 1.0;
+	signY = 1.0;
+
+    //canvas color is black, clear canvas
+	gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    //set view port to canvas
+    gl.viewport(0, 0, canvas.width, canvas.height);
+	
+	draw();
+
+	}
+	
+	function draw()
+	{
+	
+	gl.clear(gl.COLOR_BUFFER_BIT);
+		switch(bool) {
+			case true:
+						distanceX = distanceX + 0.01*signX;
+							if(distanceX > 1.825 || distanceX < 0)
+						{
+							signX = -signX;
+							bool = false;
+						}
+				break;
+			
+			case false:
+						distanceY = distanceY + 0.01*signY;
+							if(distanceY > 0.8 || distanceY < -1.00)
+						{
+							signY = -signY;
+							bool = true;
+						}
+					break;
+			default:
+				break;
+									} 
+		angle = angle + 4.0;
+		
+		gl.uniform1f(uAngle, angle*Math.PI/180);
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		gl.uniform4fv(uColor, flatten(vec4(1.0,0.0,0.0,1.0)));
+		gl.uniform1f(uShape, 1.0);
+		
+		gl.drawArrays(gl.TRIANGLES, 0, 729);
+		
+		angle2 = angle2 + 2.0;
+		gl.uniform1f(uAngle, angle2*Math.PI/180);
+		gl.uniform4fv(uColor, flatten(vec4(0.0,1.0,0.0,1.0)));
+		gl.uniform1f(uShape, 2.0);
+		gl.drawArrays(gl.TRIANGLES, 0, 729);
+		
+		angle3 = angle + angle2;
+		gl.uniform1f(uAngle, angle3*Math.PI/180);
+		gl.uniform4fv(uColor, flatten(vec4(0.0,0.0,1.0,1.0)));
+		gl.uniform1f(uShape, 3.0);
+		gl.drawArrays(gl.TRIANGLES, 0, 729);
+		
+		gl.uniform1f(uDistancex, distanceX);
+		gl.uniform1f(uDistancey, distanceY);
+		gl.uniform4fv(uColor, flatten(vec4(1.0,1.0,0.0,1.0)));
+		gl.uniform1f(uShape, 4.0);
+		gl.drawArrays(gl.TRIANGLE_FAN, 729, 100);
+		
+		requestAnimationFrame(draw);
+	
+	}
+	
+	function makeTriangles(a,b,c,count,array)
+	{
+		if (count==0)
+			triangle(a,b,c, array);
+		else
+		{
+			var ab = scale(0.5, add(a, b));
+			
+			var bc = scale(0.5, add(b, c));
+		
+			var ac = scale(0.5, add(a, c));
+			
+			
+			makeTriangles(a,ab,ac,count-1, array);
+			makeTriangles(b,ab,bc,count-1, array);
+			makeTriangles(c,ac,bc,count-1, array);
+		}
+	}
+	
+	function triangle(a,b,c, array)
+	{
+		array.push(a);
+		array.push(b);
+		array.push(c);
+	}
+	
+	function makeDisk(vertexArray, radius, count)
+	{
+		var theta = 2*Math.PI/count;				//small angle
+		
+		for (var i = 0; i < count; i++)				//generate points on a circle
+		{
+			var x = radius*Math.cos(i*theta);	//x coordinate of pointer
+			var y = radius*Math.sin(i*theta);	//y coordinate of pointer
+			
+			vertexArray.push(vec2(x,y));
+		}
+	
+	}
+	
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="500" height="500"></canvas>
+
+</body>
+
+</html>

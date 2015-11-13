@@ -1,0 +1,153 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate			
+uniform float uVelocity;
+uniform float uTime;
+void main()
+{
+    gl_Position.x = aPosition.x;    //pass vertex coordinate to gl_Position
+	gl_Position.y = aPosition.y + uVelocity*uTime - 4.9*uTime*uTime;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+	
+	gl_Position.x = gl_Position.x + 100.0;
+	gl_Position.y = gl_Position.y + 20.0;
+	
+	gl_Position.x = 2.0 * gl_Position.x / 600.0 - 1.0;    //scale x and y to 
+	gl_Position.y = 2.0 * gl_Position.y / 600.0 - 1.0;
+	
+				//pass vertex color
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+void main()
+{
+    gl_FragColor = vec4(0.0, 0.7, 0.0, 1.0); //use varying fragment color
+}
+</script>
+
+<script>
+//main drawing function
+	var gl;
+	var uVelocity;
+	var uTime;
+	var velocity;
+	var travelTime;
+	var bounce;
+	var time;
+
+function main()
+{
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	var vertices = [];
+	makeDisk(vertices, 20, 100);
+	//buffer vertices into vertex buffer
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	//connect to uniform uAngle
+	velocity = 100.0;
+	uVelocity = gl.getUniformLocation(program, "uVelocity");
+	gl.uniform1f(uVelocity,velocity);
+	
+	travelTime = velocity/4.9;
+	
+	//bounciness of ball
+	bounce = 0.95;
+	
+	//connect to uniform uTime
+	uTime = gl.getUniformLocation(program,"uTime");
+	
+	//inital time
+	time = 0.0;
+	
+	//set veiwport to canvas
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	
+	draw();
+	
+	}
+	
+	function draw()
+	{
+		
+		if(time < travelTime)
+			time = time + 0.2;
+			
+		else
+		{	
+			velocity = bounce * velocity;
+			
+			gl.uniform1f(uVelocity, velocity);
+			
+			travelTime = velocity/4.9;
+			
+			time = 0.0;
+		}
+		
+		gl.uniform1f(uTime, time);
+		
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		
+		gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+		
+		requestAnimationFrame(draw);
+	
+	}
+	
+	function makeDisk(vertexArray, radius, count)
+	{
+		var theta = 2*Math.PI/count;				//small angle
+		
+		for (var i = 0; i < count; i++)				//generate points on a circle
+		{
+			var x = radius*Math.cos(i*theta);	//x coordinate of pointer
+			var y = radius*Math.sin(i*theta);	//y coordinate of pointer
+			
+			vertexArray.push(vec2(x,y));
+		}
+	
+	}
+	
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="600" height="600"></canvas>
+
+</body>
+
+</html>

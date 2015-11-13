@@ -1,0 +1,183 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 aColor;			//vertex color
+attribute vec4 aPosition;       //vertex coordinate
+varying vec4 vColor;			//varying vertex color
+void main()
+{
+     gl_Position.x = 2.0 * aPosition.x / 1200.0 - 1.0;    //scale x and y to 
+	gl_Position.y = 2.0 * aPosition.y / 600.0 - 1.0;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;    //pass vertex coordinate to gl_Position
+	vColor = aColor;			//pass vertex color
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+varying vec4 vColor;
+void main()
+{
+    gl_FragColor = vColor; //use varying fragment color
+}
+</script>
+
+<script>
+//main drawing function
+
+function main()
+{
+
+var vertices =        //vertices of triangle
+    [
+  
+	  //vertices of Triangle
+        vec2(840, 355),vec2(967.5, 525),vec2(1095, 355),
+		
+	  //vertices of a square house
+		vec2(125, 225),vec2(125, 375),vec2(375, 375),
+		vec2(125, 225),vec2(375, 225),vec2(375, 375),
+		
+	  //vertices of a sky
+		vec2(0, 600),vec2(0, 300),vec2(1200, 300),vec2(1200, 600),
+		
+	  //vertices of the tree
+		vec2(885, 355),vec2(915, 335),vec2(1035, 355),vec2(1005, 335),
+		vec2(915, 335),vec2(915, 185),vec2(1005, 335),vec2(1005, 185),
+		vec2(885, 165),vec2(915, 185),vec2(1035, 165),vec2(1005, 185),
+		
+	   //house roof
+		vec2(80, 375),vec2(420, 375),vec2(125, 435),vec2(375, 435),
+		//house door
+		vec2(265, 320),vec2(265, 225),vec2(237.5, 320),vec2(237.5, 225)
+	];
+	
+	var colors =
+	[
+	       //color of Triangle
+        vec3(0.0, 0.7, 0.0), vec3(0.0, 0.73, 0.0), vec3(0.0, 0.27, 0.0),
+		  //color of a square
+		 vec3(1.0, 1.0, 1.0), vec3(1.0, 1.0, 1.0), vec3(1.0, 1.0, 1.0),
+		  vec3(1.0, 1.0, 1.0), vec3(1.0, 1.0, 1.0), vec3(1.0, 1.0, 1.0),
+		   //color of a sky
+		   vec3(1.0, 1.00, 1.0), vec3(0.274, 0.509, 0.705), vec3(0.274, 0.509, 0.705), vec3(0.274, 0.509, 0.705),
+		   //color of a tree trunk (Brown)
+		   vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),vec3(0.627, 0.3215, 0.1764),
+		   //color of Roof
+		    vec3(1.0, 0.0627, 0.0),vec3(1.0, 0.0627, 0.0),vec3(1.0, 0.0627, 0.0),vec3(1.0, 0.0627, 0.0),
+		  //color of Door (Red)
+			 vec3(1.0, 0.0627, 0.0),vec3(1.0, 0.0627, 0.0),vec3(1.0, 0.0627, 0.0),vec3(1.0, 0.0627, 0.0)
+    ];
+    //set up webgl
+    var canvas = document.getElementById("gl-canvas");
+    var gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex buffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+
+    //buffer vertices into vertex buffer    
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	
+	//create color buffer and bind it
+    var colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+	
+	//aColor
+	var aColor = gl.getAttribLocation(program, "aColor");
+    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aColor);
+	
+	//buffer vertices into color buffer    
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+
+    //canvas color is black, clear canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    //set view port to canvas
+    gl.viewport(0, 0, canvas.width, canvas.height);
+	
+	var circle = [], circleColor = [];
+	makeCircle(circle,circleColor, 675, 500, 77, 100, vec3(1.0, 0.898, 0.0));
+	
+	//draw Scene
+	
+	//Draw Sky
+	gl.drawArrays(gl.TRIANGLE_FAN, 9, 4);
+	//Draw the top of the tree
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+	//Draw the house
+	gl.drawArrays(gl.TRIANGLES, 3, 6);
+	//Draw the top part of the tree before the trunk
+	gl.drawArrays(gl.TRIANGLE_STRIP, 13, 4);
+	//Draw the tree trunk
+	gl.drawArrays(gl.TRIANGLE_STRIP, 17, 4);
+	//Draw the bottom of the tree trunk
+	gl.drawArrays(gl.TRIANGLE_STRIP, 21, 4);
+	//Draw the roof
+	gl.drawArrays(gl.TRIANGLE_STRIP, 25, 4);
+	//Draw door
+	gl.drawArrays(gl.TRIANGLE_STRIP, 29, 4);
+	
+	
+	//buffer the circle
+	 gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+	 gl.bufferData(gl.ARRAY_BUFFER, flatten(circle), gl.STATIC_DRAW);
+	 gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+	 gl.bufferData(gl.ARRAY_BUFFER, flatten(circleColor), gl.STATIC_DRAW);
+	 //Draw 100 points and make a triangle fan
+	 gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+	
+	}
+	
+	function makeCircle(vertexArray, colorArray, cx, cy, radius, count, color)
+	{
+		var theta = 2*Math.PI/count;				//small angle
+		
+		for (var i = 0; i < count; i++)				//generate points on a circle
+		{
+			var x = radius*Math.cos(i*theta) + cx;	//x coordinate of pointer
+			var y = radius*Math.sin(i*theta) + cy;	//y coordinate of pointer
+			
+			vertexArray.push(vec2(x,y));		//push to array
+		}
+		for (var i = 0; i< count; i++)	
+			colorArray.push(color);		//pusah the same color the same number of times
+	
+	}
+
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="1200" height="600"></canvas>
+
+</body>
+
+</html>

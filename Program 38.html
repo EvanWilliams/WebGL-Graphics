@@ -1,0 +1,114 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate			
+uniform mat4 uViewMatrix;	
+uniform mat4 uProjectMatrix;			
+
+void main()
+
+{	
+	gl_Position = uProjectMatrix * uViewMatrix* aPosition;
+	
+
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+void main()
+{
+    gl_FragColor = vec4(0.0, 0.7, 0.0 , 1.0); //use varying fragment color
+}
+</script>
+
+<script>
+//set up WebGL
+function main(){
+	var canvas = document.getElementById("gl-canvas");
+    var gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, 
+	"vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	//buffer verticies
+	var vertices[];
+	makeCubeFrame(vertices);
+	
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	
+	var eye = vec3(3,4,5);
+	var at = vec3(0,0,0);
+	var up = vec3(0,1,0);
+	
+	var height = 5;
+	var width = 5;
+	var near = 1;
+	var far = 50;
+	
+	uViewMatrix = gl.getUniformLocation(program, "uViewMatrix");
+	var matrix1 = lookat(eye,at,up);
+	gl.uniformMatrix4fv(uViewMatrix, false, flatten(matrix1));
+	//connect uMatrix
+	uProjectMatrix = gl.getUniformLocation(program, "uProjectMatrix");
+	var matrix2 = orthogonal(width, height, near, far);
+	gl.uniformMatrix4fv(uProjectMatrix, false, flatten(matrix2));
+	
+	//connect uColor
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	//veiwport
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	//clearscreen
+	gl.enable(gl.DEPTH_TEST);
+	
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	
+	gl.drawArrays(gl.LINES, 0,24);
+	}
+
+	function makeCubeFrame(vertexArray)
+	{
+	var v1 = vec3(-1,1,1), v2 =  vec3(1,1,1), v3 =  vec3(1,-1,1),
+	 v4 = vec3(-1,-1,1),v5 = vec3(-1,1,-1),v6 = vec3(1,1,-1),
+	 v7 = vec3(1,-1,-1),v8 = vec3(-1,-1,-1);
+	 
+	 vertexArray.push(v1,v2,v2,v3,v3,v4,v4,v1,
+					  v5,v6,v6,v7,v7,v8,v8,v5,
+					  v2,v6,v3,v7,v1,v5,v4,v8);
+	}
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+<script>
+
+</script>
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="500" height="500"></canvas>
+
+</body>
+
+</html>

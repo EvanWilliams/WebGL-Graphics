@@ -1,0 +1,136 @@
+<!-- This program draws a triangle -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 aPosition;       //vertex coordinate
+void main()
+{
+    gl_Position = aPosition;    //pass vertex coordinate to gl_Position
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+void main()
+{
+    gl_FragColor = vec4(0.0, 0.7, 0.0, 1.0); //fragment color is red
+}
+</script>
+
+<script>
+//main drawing function
+function main()
+{
+	
+	//set up webgl
+    var canvas = document.getElementById("gl-canvas");
+    var gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+
+    //canvas color is black, clear canvas
+    gl.clearColor(0.0, 0.0, 0.5, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    //set view port to canvas
+    gl.viewport(0, 0, canvas.width, canvas.height);
+	
+	var vertices1 =		//vertices of triangles
+	[
+		vec2(-0.8, 0), vec2(-0.2,0), vec2(-0.5,0.5),
+		vec2(0.8, 0), vec2(0.2,0), vec2(0.5,-0.5)
+	];
+	
+	var vertices2 =		//vertices of triangles
+	[
+		vec2(-1, 0), vec2(-0.5,0.5), vec2(0,0),
+		vec2(0.5 0.5), vec2(0.5,-0.5)
+	];
+	
+	var vertices3 =		//vertices of triangles
+	[
+		vec2(0, 0), vec2(0,0.5), vec2(0.5,0),
+		vec2(0, -0.5), vec2(-0.5,0)
+	];
+	
+	var vertices4 =		//vertices of triangles
+	[
+		vec2(-0.5, 0), vec2(-0.5,0.5), vec2(0,0),
+		vec2(0.5, 0.5), vec2(0.5,0), vec2(0,-0.5)
+	];
+	
+	var option = 1;  	//option to draw various primitives
+	
+	if (option == 1)	//draw triangles
+	{
+		gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices1), gl.STATIC_DRAW);
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
+	
+	}
+	else if (option == 2)	//draw triangle Strip
+	{
+		gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices2), gl.STATIC_DRAW);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 5);
+	
+	}
+	else if (option == 3)	//draw triangle fan
+	{
+		gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices3), gl.STATIC_DRAW);
+		gl.drawArrays(gl.TRIANGLE_FAN, 0, 5);
+	
+	}
+	else if (option == 4)	//draw Lines
+	{
+		gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices4), gl.STATIC_DRAW);
+		gl.drawArrays(gl.LINES, 0, 6);
+	
+	}
+	else if (option == 5)	//draw line Strip
+	{
+		gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices4), gl.STATIC_DRAW);
+		gl.drawArrays(gl.LINE_STRIP, 0, 6);
+	 
+	}
+	else if (option == 6)	//draw line_Loop
+	{
+		gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices4), gl.STATIC_DRAW);
+		gl.drawArrays(gl.LINE_LOOP, 0, 6);
+	
+	}
+	else if (option == 7)	//draw points
+	{
+		gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices4), gl.STATIC_DRAW);
+		gl.drawArrays(gl.POINTS, 0, 6);
+	
+	}
+	else;
+	
+	}
+</script>
+</head>
+<body onload="main">
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="500" height="500"></canvas>
+</body>
+</html>

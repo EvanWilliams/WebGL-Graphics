@@ -1,0 +1,295 @@
+
+		
+		<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate			
+uniform mat4 uMatrix;			//uniform uMatrix
+
+void main()
+{	
+	gl_Position = uMatrix * aPosition;
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+uniform vec4 uColor;				//uColor
+void main()
+{
+    gl_FragColor = uColor; //use varying fragment color
+}
+</script>
+
+<script>
+//main drawing function
+	var gl,uMatrix,uColor;
+	var factor;			
+	//how much to scale the yellow circle
+	var offset = 0.0;	
+	// how for to move the ocilating brown square
+	var sign = 1.0;		
+	// var when to change the direction of the scaling
+	var sign2 = -1.0;	
+	// var for when to change the direction of the ocillating
+	var angle = 0.0;	
+	//angle to rotate first triangle
+	var angle2 = 0.0;	
+	//angle to rotate second triangle
+
+function main()
+{
+
+	var vertices = [
+	
+	];
+	//Set up Webgl
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, 
+	"vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	makeDisk(vertices,0.1,100);//Circle
+	makeTriangles(vec2(0.5,0.0),vec2(-0.25,-0.433),
+	vec2(-0.25,0.433),4,vertices);//Triangle
+	vertices.push(vec2(-0.25,-0.25),vec2(-0.25,0.25),
+	vec2(0.25,-0.25),vec2(0.25,0.25));//Square
+	
+	gl.bufferData(gl.ARRAY_BUFFER, 
+	flatten(vertices), gl.STATIC_DRAW);
+	//connect to uniform uAngle
+	uMatrix = gl.getUniformLocation(program, "uMatrix");
+	//connect to uniform uColor
+	uColor = gl.getUniformLocation(program, "uColor");
+	
+	//inital scaling factor
+	factor = 1.0;
+	
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	
+	draw();
+	}
+	
+	function draw()
+	{
+		
+	
+		angle = angle+4 % 360;//angle for how fast to
+		//Rotate the Blue Triangle
+		angle2 = angle2 - 2 %360;
+		//Rotate Green Triangle
+	
+		//Factor is incremented
+			//sign is switched at ends
+		factor = factor + 0.01*sign;
+		if(factor > 1.2 || factor < 0.40)
+			sign = -sign
+			
+		//offset is incremented
+			//sign2 is switched at ends
+		offset = offset + 0.01*sign;
+		if(offset >= 0.25 || offset <= -0.15)
+			sign2 = -sign2
+		
+		// bottom left 
+		//scale and translate
+		var matrix1 = translate(-5.0,2.0,0.0);
+		
+		var matrix2 = rotatez(30);
+		
+		var matrix3 = translate(5.0,-2.0,0.0);
+		
+		var matrix = multiply(matrix3,multiply( matrix2,matrix1));
+		
+		//test
+		//set matrix to re position Circle
+		gl.uniformMatrix4fv(uMatrix, false,
+		flatten(matrix));
+		
+		//set color
+		gl.uniform4fv(uColor,
+		flatten(vec4(1.0,1.0,0.0,1.0)));
+		
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		
+		gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+		
+		//static square
+		var matrix2 = rotatez(-60);
+		
+		var matrix3 = translate(2.0,1.0,1.0);
+		
+		var matrix = multiply(matrix3, matrix2);
+		//multiply matrices
+		//set Matrix
+		gl.uniformMatrix4fv(uMatrix, false, flatten(matrix))
+		
+		//set color
+		gl.uniform4fv(uColor, 
+		flatten(vec4(0.98,0.01,0.06,1.0)));
+		
+		gl.drawArrays(gl.TRIANGLE_STRIP, 343, 4);
+		
+		// right most triangle
+	var	 matrix1 = scaling(0.65, 0.65, 0.0);
+		
+		 matrix2 = translate(0.66,0.5, 0.0);
+		 //rotation happens every frame
+		 var matrix3 = rotatez(angle);
+		
+		//multiply matrices
+		 matrix = multiply(matrix2,
+		 multiply(matrix3, matrix1));
+			//set Matrix
+		gl.uniformMatrix4fv(uMatrix,
+		false, flatten(matrix));
+		//set color
+		gl.uniform4fv(uColor,
+		flatten(vec4(0.0,0.10,1.0,1.0)));
+		//Draw Triangles
+		gl.drawArrays(gl.TRIANGLES, 100, 243);
+		
+		//center triangle
+		matrix1 = scaling(0.5, 0.5, 0.0);
+		
+		matrix2 = translate(0,0.5, 0.0);
+		//rotation happens every frame
+		matrix3 = rotatez(angle2*1.5);
+		
+		//multiply matrices
+		matrix = multiply(matrix2,
+		multiply(matrix3, matrix1));
+			//set Matrix
+		gl.uniformMatrix4fv(uMatrix,
+		false, flatten(matrix));
+		//set color
+		gl.uniform4fv(uColor,
+		flatten(vec4(0.0,1.0,0.0,1.0)));
+		//Draw Triangles
+		gl.drawArrays(gl.TRIANGLES, 100, 243);
+		
+		//ocillating square
+		matrix1 = scaling(.33, .33, 0.0);
+		
+		matrix2 = translate(0.25,-1.5, 0.0);
+		
+		matrix3 = translate(offset,0, 0.0);
+		//multiply matrices
+		matrix = multiply(matrix1,
+		multiply(matrix2, matrix3));
+		//set Matrix
+		gl.uniformMatrix4fv(uMatrix,
+		false, flatten(matrix));
+		//set color
+		gl.uniform4fv(uColor,
+		flatten(vec4(0.30,0.18,0.156,1.0)));
+		//Draw Square
+		gl.drawArrays(gl.TRIANGLE_STRIP, 343, 4);
+	
+		
+		// circle that is rotating
+		matrix1 = scaling(.45, .45, 0.0);
+		
+		matrix2 = translate(0.12,0, 0.0);
+		
+		matrix3 = rotatez(angle);
+		var matrix4 = translate(0.66,-0.5, 0.0);
+		//multiply matrices
+		matrix = multiply(matrix4,
+		multiply(matrix3, multiply(matrix2, matrix1)));
+		//set Matrix
+		gl.uniformMatrix4fv(uMatrix,
+		false, flatten(matrix));
+		//set color
+		gl.uniform4fv(uColor, 
+		flatten(vec4(1.0,1.0,1.0,1.0)));
+		//Draw Circle
+		gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+		
+		
+		requestAnimationFrame(draw);
+	
+	}
+	
+	function makeDisk(vertexArray, radius, count)
+	{
+		var theta = 2*Math.PI/count;				
+		//small angle
+		
+		for (var i = 0; i < count; i++)				
+		//generate points on a circle
+		{
+			var x = radius*Math.cos(i*theta);	
+			//x coordinate of pointer
+			var y = radius*Math.sin(i*theta);	
+			//y coordinate of pointer
+			
+			vertexArray.push(vec2(x,y));
+		}
+	
+	}
+	
+	function makeTriangles(a,b,c,count,array)
+	{
+	//make a seripinski triangle
+		if (count==0)
+			triangle(a,b,c, array);
+		else
+		{
+			var ab = scale(0.5, add(a, b));
+			
+			var bc = scale(0.5, add(b, c));
+		
+			var ac = scale(0.5, add(a, c));
+			
+			
+			makeTriangles(a,ab,ac,count-1, array);
+			makeTriangles(b,ab,bc,count-1, array);
+			makeTriangles(c,ac,bc,count-1, array);
+		}
+	}
+	//helper function
+	function triangle(a,b,c, array)
+	{
+		array.push(a);
+		array.push(b);
+		array.push(c);
+	}
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="900" height="600"></canvas>
+
+</body>
+
+</html>

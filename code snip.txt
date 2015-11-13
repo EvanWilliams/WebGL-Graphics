@@ -1,0 +1,30 @@
+var points = 100;
+	var theta = 2*Math.PI/points;
+	var circlePoints =[];
+	
+	for  (var i = 0; i < points; i++)
+	{
+		var x = 0.5*Math.cos(i*theta);
+		var y = 0.5*Math.sin(i*theta);
+		vertices.push(vec2(x,y));
+	}
+	//buffer vertices into vertex buffer    
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(circlePoints), gl.STATIC_DRAW);
+
+    //draw triangle
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, points)
+	
+	...................
+	var vertices =        //vertices of triangle
+    [
+  
+	  //vertices of Triangle
+        vec2(0.5, 0.0),vec2(0.5, 0.6),vec2(1.0, 0.0),
+		
+	  //verticies of a square
+		vec2(-0.75, -0.25),vec2(-0.75, 0.25),vec2(-0.25, 0.25),
+		vec2(-0.75, -0.25),vec2(-0.25, -0.25),vec2(-0.25, 0.25),
+		
+	  //verticies of a rectangle
+		vec2(0, 600),vec2(0, 300),vec2(1200, 300),vec2(1200, 600)
+	];

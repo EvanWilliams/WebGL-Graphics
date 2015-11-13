@@ -1,0 +1,199 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate			
+uniform float uVelocity;
+uniform float uAngle;
+uniform float uTime;
+uniform float uShape;
+
+void main()
+{
+	
+    gl_Position.x = aPosition.x + uVelocity*uTime*cos(uAngle);    //pass vertex coordinate to gl_Position
+	gl_Position.y = aPosition.y + uVelocity*uTime*sin(uAngle) - 4.9*uTime*uTime;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+	
+	gl_Position.x = gl_Position.x + 100.0;
+	gl_Position.y = gl_Position.y + 40.0;
+	
+	gl_Position.x = 2.0 * gl_Position.x / 1200.0 - 1.0;    //scale x and y to 
+	gl_Position.y = 2.0 * gl_Position.y / 600.0 - 1.0;
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+uniform vec4 uColor;
+void main()
+{
+    gl_FragColor = uColor; //use varying fragment color
+}
+</script>
+
+<script>
+//main drawing function
+	var movedOnce = false;
+	var gl;
+	var uTime;
+	var uAngle;
+	var time;
+	var travelTime;
+	var velocity;
+
+function main()
+{
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	var vertices = [];
+	var xStart;
+	var xEnd;
+	var center;
+	makeDisk(vertices, 20, 100);
+	
+	
+	
+	center = 700+Math.random()*400;//equals a value from 700 to 1200 with a length of 100 centered from 750 to 1150
+	xStart = center-150;
+	xEnd = center-50;
+	
+	vertices.push(vec2(-100,-40),vec2(-100,-20),vec2(1100,-40),vec2(1100,-20));
+	vertices.push(vec2(xStart,-20),vec2(xStart,0),vec2(xEnd,-20),vec2(xEnd,0));
+	//buffer vertices into vertex buffer
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	//connect to uniform uAngle
+	
+	velocity = document.getElementById("velocitySlider").value;
+	uVelocity = gl.getUniformLocation(program, "uVelocity");
+	gl.uniform1f(uVelocity, velocity);
+	
+	//intial angle
+	angle = document.getElementById("angleSlider").value;
+	uAngle = gl.getUniformLocation(program, "uAngle");
+	gl.uniform1f(uAngle, angle*Math.PI/180);
+	
+	travelTime = velocity*Math.sin(angle*Math.PI/180)/4.9;
+	uTime = gl.getUniformLocation(program,"uTime");
+	
+	uColor = vec4(1.0,0.0,1.0,1.0);
+	uColor = gl.getUniformLocation(program, "uColor");
+	time = 0.0;
+    //canvas color is black, clear canvas
+	gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+	gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+	gl.uniform4fv(uColor, flatten(vec4(0.0,1.0,0.0,0.0)));
+	gl.drawArrays(gl.TRIANGLE_FAN, 100, 4);
+	gl.uniform4fv(uColor, flatten(vec4(1.0,1.0,0.0,0.0)));
+	gl.drawArrays(gl.TRIANGLE_FAN, 104, 4);
+	
+	
+
+	}
+	
+	
+	function makeDisk(vertexArray, radius, count)
+	{
+		var theta = 2*Math.PI/count;				//small angle
+		
+		for (var i = 0; i < count; i++)				//generate points on a circle
+		{
+			var x = radius*Math.cos(i*theta);	//x coordinate of pointer
+			var y = radius*Math.sin(i*theta);	//y coordinate of pointer
+			
+			vertexArray.push(vec2(x,y));
+		}
+	
+	}
+	
+	function draw()
+	{
+		if(movedOnce==false){
+		time = time + 0.2;
+		if(time > travelTime){
+			time = travelTime;
+			movedOnce = true;
+			}
+		
+		gl.uniform1f(uTime, time);
+		
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		
+		gl.uniform4fv(uColor, flatten(vec4(0.0,.0,1.0,0.0)));
+		gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+		gl.uniform4fv(uColor, flatten(vec4(0.0,1.0,0.0,0.0)));
+		gl.drawArrays(gl.TRIANGLE_FAN, 100, 4);
+		gl.uniform4fv(uColor, flatten(vec4(1.0,1.0,0.0,0.0)));
+		gl.drawArrays(gl.TRIANGLE_FAN, 104, 4);
+		
+		
+		
+		
+		requestAnimationFrame(draw);
+	
+		}
+	}
+	
+	function setVelocity(){
+		velocity = document.getElementById("velocitySlider").value;
+		travelTime = velocity*Math.sin(angle*Math.PI/180)/4.9;
+		gl.uniform1f(uVelocity, velocity);
+		
+			}
+
+	function setAngle(){
+		angle = document.getElementById("angleSlider").value;
+		travelTime = velocity*Math.sin(angle*Math.PI/180)/4.9;
+		gl.uniform1f(uAngle, angle*Math.PI/180);
+		}
+	
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="1200" height="600"></canvas>
+
+<p>
+<button id="startButton" onmousedown="draw()">Start</button>
+<br>VELOCITY<br>
+60 <input id ="velocitySlider" type="range" min = "60" max ="105" step = "5" value = "75" onchange ="setVelocity()" > 105<br>
+Angle<br>
+0 <input id ="angleSlider" type="range" min = "0" max ="90" step = "5" value = "5" onchange ="setAngle()" > 90<br>
+</p>
+
+
+</body>
+
+</html>

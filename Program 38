@@ -1,0 +1,55 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate			
+uniform mat4 uMatrix;			
+
+void main()
+
+{	
+	gl_Position = uMatrix * aPosition;
+	gl_Position.x = gl_Position.x / 720.0 - 1.0;    //scale x and y to 
+	gl_Position.y = gl_Position.y / 720.0 - 1.0;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0; 
+	gl_PointSize 	= 7.0;
+
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+uniform vec4 uColor;
+void main()
+{
+    gl_FragColor = uColor; //use varying fragment color
+}
+</script>
+
+<script>
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()" onmousemove="mine(event)">
+<script>
+
+</script>
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="720" height="720"></canvas>
+
+</body>
+
+</html>

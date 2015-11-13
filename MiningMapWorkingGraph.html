@@ -1,0 +1,703 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate			
+uniform mat4 uMatrix;			
+
+void main()
+
+{	
+	gl_Position = uMatrix * aPosition;
+	gl_Position.x = gl_Position.x / 720.0 - 1.0;    //scale x and y to 
+	gl_Position.y = gl_Position.y / 720.0 - 1.0;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0; 
+	gl_PointSize 	= 7.0;
+
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+uniform vec4 uColor;
+void main()
+{
+    gl_FragColor = uColor; //use varying fragment color
+}
+</script>
+
+<script>
+
+	var ResourceOH = 0;
+	var SquareColors = createArray(72,72);
+	var SquareAttributes = createArray(72,72);
+	var CargoCapacity = 125;
+	var CurCargo= 0;
+	var alertOnce = true;
+	var DropOffCost = 50;
+//main drawing function
+	var theta=0.0;	
+	//used to move the line across the screen
+	var theta2=0.0;
+	//used to move the line across the screen
+	var MinerOneX =0.1;
+	//X Coordinate of the Cat
+	var MinerOneY =0.0;
+	//Y Coordinate of the Cat
+	var CatRotation = 0;
+	//Rotation of the cat
+	var MouseX =0;
+	//X Coordinate of the Mouse
+	var MouseY =0;
+	//Y Coordinate of the Mouse
+	var tick = 0;
+	//used to determine how fast the game plays
+	var caught = false;
+	//once the mouse is caught the game is over
+	var gl,matrix,uMatrix,uColor;
+	var angle = 0.0;
+	var tick = 0;
+
+function main()
+{
+	var vertices = [vec2(0,0),vec2(0,1600)
+	,vec2(0,0),vec2(1600,0)
+	//Lines to be put across the canvas
+	
+	];
+	makeDisk(vertices,15,100);
+	//Make a square (mouse)
+	vertices.push(vec2(5,5),vec2(0,-10)
+	,vec2(-5,5));
+	//Triangle(Cat)
+	vertices.push(vec2(0,0),vec2(0,20),vec2(20,20)
+	,vec2(20,0));
+
+	//set up WebGL
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, 
+	"vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	//buffer verticies
+	gl.bufferData(gl.ARRAY_BUFFER, 
+	flatten(vertices), gl.STATIC_DRAW);
+	uMatrix = gl.getUniformLocation(program, "uMatrix");
+	//connect uMatrix
+	uColor = gl.getUniformLocation(program, "uColor");
+	//connect uColor
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	//veiwport
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	//clearscreen
+	MouseX = 500;
+	MouseY = 1140;
+	//Determine randomly the X and Y of the Mouse
+	MinerOneX = 1410;
+	MinerOneY = 210;
+	//Determine randomly the X and Y of the Cat
+	var randRota = Math.random();
+	if(randRota<.25)
+	{CatRotation = 0;}//set 0
+	else if(randRota<.50)
+	{CatRotation = 90;}//set 90
+	else if(randRota<.75)
+	{CatRotation = 180;}//set 180
+	else 
+	{CatRotation = 270;}//set 270
+	
+	MakeSquares(vertices,SquareColors,SquareAttributes,72,72,10);
+	draw();
+	}
+	
+	
+	function draw()
+	{
+	if(caught == false){
+	//if caught is false
+	
+	//every 20th time
+	
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	//clear screen
+	
+	if(Math.abs(MinerOneX-MouseX)<0.05)
+	if(Math.abs(MinerOneY-MouseY)<0.05)	
+	{
+	//see if caught
+	caught = true;
+	}
+
+	for(var j = 0; j<72; j++)
+	{
+	for(var k = 0; k<72; k++)
+	{
+	var columnNum = Math.floor(k/72);
+	var rowNum = j%72;
+	//go through and print all 4 vertices and change the color
+	//the 11 is the other vertices
+	matrix = translate(k*20,j*20,0);
+	//amount to move the squares every time the loop is called
+	gl.uniformMatrix4fv(uMatrix, false, flatten(matrix));
+	gl.uniform4fv(uColor, flatten(SquareColors[j][k]));
+	gl.drawArrays(gl.TRIANGLE_FAN,107,4);
+	
+	}
+	}
+	var choose = Math.random();
+	//determine which direction
+	//the mouse will choose
+	if (tick % 20 ==1){
+	if(choose>.75)
+	//move up
+	MouseY = MouseY+40;
+	else if(choose>.50)
+	//move right
+	MouseX = MouseX+40;
+	else if(choose>.25)
+	//move down
+	MouseY = MouseY-40;
+	else //move left
+	MouseX = MouseX-40;
+	}
+	
+	var matrixY = translate(0.0,theta2*40,0.0);
+	//initalize MatrixY
+	matrix = translate(MouseX,MouseY,0.0)
+	//Translate the mouse to the bottom of the screen
+	gl.uniformMatrix4fv(uMatrix, false, flatten(matrix));
+	//set uMatrix
+	gl.uniform4fv(uColor, flatten(vec4(0.0,0.0,0.0,1.0)));
+	//set uColor
+	gl.drawArrays(gl.TRIANGLE_FAN,4,100);
+	//draw Mouse
+	
+	matrix = multiply(translate(MinerOneX,
+	MinerOneY,0.0),rotatez(CatRotation));
+	//Translate the mouse to the bottom of the screen
+	//set uMatrix
+	gl.uniformMatrix4fv(uMatrix, false, flatten(matrix));
+	
+	gl.uniform4fv(uColor, 
+	flatten(vec4(1.0,1.0,1.0,1.0)));
+	//set uColor
+	gl.drawArrays(gl.TRIANGLES,104,3);
+	//draw Cat
+	gl.uniform4fv(uColor, 
+	flatten(vec4(0.0,0.0,0.0,1.0)));
+	//set uColor
+	gl.drawArrays(gl.LINE_LOOP,104,3);
+	gl.uniform4fv(uColor, 
+	flatten(vec4(1.0,0.0,0.1,1.0)));
+	
+	if(Math.abs(MinerOneX-MouseX)<0.05)
+	if(Math.abs(MinerOneY-MouseY)<0.05)	
+	{
+	caught = true;//see if caught
+	}
+	
+	
+	
+	
+	for(var i = 1.0; i<63.0; i++){
+	//draw the vertical lines
+	var matrixX = translate(theta*40,0,0);
+	matrix = multiply(matrixX,matrixY);
+	//multiply matrices
+	gl.uniformMatrix4fv(uMatrix, false, flatten(matrix));
+	//set uMatrix
+	gl.drawArrays(gl.LINES, 0, 2);
+	//draw lines
+	theta++;
+	}
+	
+	for(var j = 1.0; j<63.0; j++){
+	//draw the horizantal lines
+	var matrixY = translate(0,theta2*40,0);
+	gl.drawArrays(gl.LINES, 2, 2);
+	//draw lines
+	matrix = multiply(translate(0.0,0.0,0.0),matrixY);
+	//multiply matrices
+	gl.uniformMatrix4fv(uMatrix, false, flatten(matrix));
+	//set uMatrix
+	theta2++;
+	}
+	//reset theta for the next draw call
+	theta=0;
+	theta2=0;
+	tick++;
+
+	
+
+	//reset theta for the next draw call
+	//theta=0;
+	//theta2=0;
+	//tick++;
+	
+	
+	requestAnimationFrame(draw);
+}
+	}
+
+	
+	
+	function makeDisk(vertexArray, radius, count)
+	{
+		var theta = 2*Math.PI/count;			
+		//small angle
+		
+		for (var i = 0; i < count; i++)			
+		//generate points on a circle
+		{
+			var x = radius*Math.cos(i*theta);	//x coordinate of pointer
+			var y = radius*Math.sin(i*theta);	//y coordinate of pointer
+			
+			vertexArray.push(vec2(x,y));
+		}
+	
+	}
+	
+ 	function MakeSquares(verticesArray,SquareColors,SquareAttributes,numberX,numberY,sqWidth){
+		StartingX = 0;
+		StartingY = 0;
+		var R,G,B,cPick,SquareColor,squareAttribute, skewNum;
+		var startLoc = false;
+		
+	for(var j = 0; j<numberY; j++)
+	{
+		if( j<14)
+		
+		//only up to the 9th row
+		{startLoc = true;}
+	for(var i = 0; i<numberX; i++)
+	{
+		skewNum = Math.random()/2;
+		skewNum = skewNum*(skewNum-0.0000015333/skewNum)/skewNum;
+		cPick = Math.random()/5;
+		cPick += skewNum;
+		cPick = cPick*((j-i/2)/115);
+		
+		if(i < 62 && i > 59 && j>7 && j< 10)
+		{
+		
+			
+		//make that square black
+		SquareColors[j][i] = vec4(0.5,0.0,0.5,1.0);
+		SquareAttributes[j][i] = 6.0;
+		
+		}
+		else if(i>numberX-19 && startLoc==true)
+		{
+		//make that square black
+		SquareColors[j][i] = vec4(0.0,0.0,0.0,1.0);
+		SquareAttributes[j][i] = 0.0;
+		}
+		else if(i == numberX-22 && startLoc==true )
+		{
+		//make that square black
+		SquareColors[j][i] = vec4(0.0,0.0,1.0,1.0);
+		SquareAttributes[j][i] = 5.0;
+		} else  {
+	
+		if(cPick<.04){
+		//1
+		SquareColor = vec4(0.7,0.38,0.16,1.0);
+		squareAttribute = 1.0;
+		}
+		else if(cPick<.08){
+		//2
+		SquareColor = vec4(1.0,0.05,0.1,1.0);
+		squareAttribute = 2.0;
+		}else if(cPick<.12){
+		//3
+		SquareColor = vec4(1.0,1.0,0.0,1.0);
+		squareAttribute = 3.0;
+		}else if(cPick<.16){
+		//4
+		SquareColor = vec4(0.0,1.0,0.0,1.0);
+		squareAttribute = 4.0;
+		}else{
+		//5
+		SquareColor = vec4(0.35,0.52,0.933,1.0);
+		squareAttribute = 5.0;
+		}
+			
+		SquareColors[j][i] = SquareColor;
+		SquareAttributes[j][i] = squareAttribute; 
+		}
+	}
+	startLoc = false;
+	
+	}
+	var f;
+	} 
+	
+	function createArray(length) {
+    var arr = new Array(length || 0),
+        i = length;
+
+    if (arguments.length > 1) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        while(i--) arr[length-1 - i] = createArray.apply(this, args);
+    }
+
+    return arr;
+}
+	
+	function mine(event)
+	{
+	var posX,posY;
+	
+	if(CurCargo<CargoCapacity){
+		var y = Math.abs(event.clientY-725);	
+	 
+		var x = event.clientX;
+		posX = Math.floor (x/10)-1;
+		posY = Math.floor (y/10);
+		
+		if(SquareAttributes[posY][posX] == 0.0 || SquareAttributes[posY][posX] == 6.0 || posX>72 || posY>72 )
+		return;
+		
+		if(distanceFormula(posX,posY,MinerOneX,MinerOneY)<50){
+		
+		switch(SquareAttributes[posY][posX]) {	
+			case 1.0:
+			//0 left
+			SquareColors[posY][posX] = vec4(0.0,0.0,0.0,1.0);
+			SquareAttributes[posY][posX] = 0.0;
+			break;
+	
+			case 2.0:
+			//1 left
+			SquareColors[posY][posX] = vec4(0.7,0.38,0.16,1.0);
+			SquareAttributes[posY][posX] = 1.0;
+			break;
+			
+			case 3.0:
+			//2 left
+			SquareColors[posY][posX] = vec4(1.0,0.05,0.1,1.0);
+			SquareAttributes[posY][posX] = 2.0;
+			break;
+			
+			case 4.0:
+			//3left
+			SquareColors[posY][posX] = vec4(1.0,1.0,0.0,1.0);
+			SquareAttributes[posY][posX] = 3.0;
+			break;
+			
+			case 5.0:
+			//4 left
+			SquareColors[posY][posX] = vec4(0.0,1.0,0.0,1.0);
+			SquareAttributes[posY][posX] = 4.0;
+			break;
+		
+		
+		}
+		
+		CurCargo++;
+		
+		}
+		}else{
+		if(alertOnce == true){
+		alertOnce = false;
+		alert("Your cargo bay is full");
+		}
+		
+	}
+	}
+	
+	function IncResourceOH(dropoff){
+	ResourceOH += dropoff;
+	}
+	
+	function distanceFormula(PosX,PosY,curMineX,curMineY)
+	{
+		var x,y,z = 0;
+		y = Math.pow(Math.abs(PosX*10 - curMineX/2),2) 
+		z = Math.pow(Math.abs(PosY*10- curMineY/2),2)
+		x = Math.sqrt(y+z);
+		return x;
+	}
+	
+	function SqIsOpen(){
+	if(Math.floor((MinerOneX/20))%2==0 && Math.floor((MinerOneY/20))%2==0)
+	{
+	if(
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)+1] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)+1] == 0.0)
+	 {
+	 return true;
+	 }else return false;
+	}else if(Math.floor((MinerOneX/20))%2==0 && Math.floor((MinerOneY/20))%2==1)
+	{
+	if(
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)+1] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)+1] == 0.0)
+	 {
+	 return true;
+	 }else return false;
+	}else if(Math.floor((MinerOneX/20))%2==1 && Math.floor((MinerOneY/20))%2==1)
+	{
+	if(
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)-1] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)-1] == 0.0)
+	 {
+	 return true;
+	 }else return false;
+	}else if(Math.floor((MinerOneX/20))%2==1 && Math.floor((MinerOneY/20))%2==0)
+	{
+	if(
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)-1] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)] == 0.0 &&
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)-1] == 0.0)
+	 {
+	 return true;
+	 }else return false;
+	}
+	}
+	
+	function FindLoc(x){
+	var ans = Math.floor(x/20);
+	return ans;
+	}
+	
+	function MakeDropOff(){
+	if(isEmpty()==true && ResourceOH >DropOffCost)
+	{
+	if(FindLoc(MinerOneX)%2==0 && FindLoc(MinerOneY)%2==0)
+	{
+	
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)] = 6.0 ;
+	 SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)+1] = 6.0 ;
+	  SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)+1]  = vec4(0.5,0.0,0.5,1.0);
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)] = 6.0 ;
+	  SquareColors[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)+1] = 6.0;
+	  SquareColors[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)+1]  = vec4(0.5,0.0,0.5,1.0);
+	 
+	 
+	}else if(FindLoc(MinerOneX)%2==0 && FindLoc(MinerOneY)%2==1)
+	{
+		SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)] = 6.0 ;
+		SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+		SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)+1] = 6.0 ;
+		SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)+1]  = vec4(0.5,0.0,0.5,1.0);
+		SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)] = 6.0 ;
+		SquareColors[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+		SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)+1] = 6.0;
+		SquareColors[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)+1]  = vec4(0.5,0.0,0.5,1.0);
+	}else if(FindLoc(MinerOneX)%2==1 && FindLoc(MinerOneY)%2==1)
+	{
+		SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)] = 6.0 
+		SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+		SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)-1] = 6.0 
+		SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)-1]  = vec4(0.5,0.0,0.5,1.0);
+		SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)] = 6.0 
+		SquareColors[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+		SquareAttributes[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)-1] = 6.0
+		SquareColors[FindLoc(MinerOneY)-1][FindLoc(MinerOneX)-1]  = vec4(0.5,0.0,0.5,1.0);
+	 
+	}else if(FindLoc(MinerOneX)%2==1 && FindLoc(MinerOneY)%2==0)
+	{
+	
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)] = 6.0 ;
+	 SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+	 SquareAttributes[FindLoc(MinerOneY)][FindLoc(MinerOneX)-1] = 6.0 ;
+	 SquareColors[FindLoc(MinerOneY)][FindLoc(MinerOneX)-1]  = vec4(0.5,0.0,0.5,1.0);
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)] = 6.0 ;
+	 SquareColors[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)]  = vec4(0.5,0.0,0.5,1.0);
+	 SquareAttributes[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)-1] = 6.0;
+	 SquareColors[FindLoc(MinerOneY)+1][FindLoc(MinerOneX)-1]  = vec4(0.5,0.0,0.5,1.0);
+	 
+	}
+	ResourceOH = ResourceOH- DropOffCost;
+	return true;
+	}
+	return false;
+	}
+	
+	function isEmpty(){
+	switch(CatRotation) {
+	
+			case 0:
+			//move the cat down
+			//Wrap edge if it is out of the screen
+			var c = Math.floor((MinerOneY-20)/20);
+			var d = Math.floor(MinerOneX/20);
+				if(SquareAttributes[Math.floor((MinerOneY-20)/20)][Math.floor(MinerOneX/20)] == 0.0||SquareAttributes[Math.floor((MinerOneY-20)/20)][Math.floor(MinerOneX/20)] == 6.0)
+				{
+					return true;
+				}
+				else{
+					return false;
+					}
+						break;
+			
+			case 90:
+			//move the cat right
+			//Wrap edge if it is out of the screen
+			var a = Math.floor((MinerOneY)/20);
+			var b = Math.floor((MinerOneX+20)/20);
+				if(SquareAttributes[Math.floor((MinerOneY)/20)][Math.floor((MinerOneX+20)/20)] == 0.0|| SquareAttributes[Math.floor((MinerOneY)/20)][Math.floor((MinerOneX+20)/20)] == 6.0)
+				{
+					return true;
+				}
+				else{
+					return false;
+					}
+						break;
+			break;
+			
+			case 180:
+
+			if(SquareAttributes[Math.floor((MinerOneY+20)/20)][Math.floor((MinerOneX)/20)] == 0.0 || SquareAttributes[Math.floor((MinerOneY+20)/20)][Math.floor((MinerOneX)/20)] == 6.0)
+				{
+					return true;
+				}
+				else{
+					return false;
+					}
+						break;
+			
+			case 270:
+			
+			var e = Math.floor((MinerOneY)/20);
+			var f = Math.floor(((MinerOneX-20)/20));
+			
+			if(SquareAttributes[Math.floor((MinerOneY)/20)][Math.floor(((MinerOneX-20)/20))] == 0.0||SquareAttributes[Math.floor((MinerOneY)/20)][Math.floor(((MinerOneX-20)/20))] == 6.0)
+				{
+					return true;
+				}
+				else{
+					return false;
+					}
+						break;
+		}
+	}
+	
+	document.addEventListener('keydown', function(event) {
+    if (event.keyCode == 37) {
+	//on right arrow key
+	if(CatRotation == 0){
+	//if the number is less then 0 it is 270
+	CatRotation = 270;
+	}
+	else
+	CatRotation = (CatRotation-90) % 360;    
+    }
+    else if (event.keyCode == 38) {
+	//on up arrow
+	CatRotation = CatRotation % 360;
+	//insert if isEmpty
+	
+	if(isEmpty()==true){
+	switch(CatRotation) {
+	
+			case 0:
+			//move the cat down
+			//Wrap edge if it is out of the screen
+				MinerOneY = MinerOneY-20;
+				var p = SqIsOpen();
+				if(MinerOneY<10){
+				MinerOneY = 10;
+				}
+			break;
+			
+			case 90:
+			//move the cat right
+			//Wrap edge if it is out of the screen
+				MinerOneX = MinerOneX+20;
+				var p = SqIsOpen();
+				if(MinerOneX>1430){
+				MinerOneX = 1430;
+				}
+			break;
+			
+			case 180:
+			//move the cat up
+			//Wrap edge if it is out of the screen
+			MinerOneY = MinerOneY+20;
+			var p = SqIsOpen();
+			if(MinerOneY>1430){
+			MinerOneY = 1430;
+			}
+			
+			break;
+			
+			case 270:
+			//move the cat left
+			//Wrap edge if it is out of the screen
+			MinerOneX = MinerOneX-20;
+			var p = SqIsOpen();
+			if(MinerOneX<10){
+			MinerOneX = 10;
+			}
+			break;
+		}
+    }
+	}
+    else if (event.keyCode == 39) {
+	//rotate counterclockwise
+	CatRotation = (CatRotation+90) % 360;
+       
+    }else if (event.keyCode == 70) {
+	//Key F
+	
+		if(SquareAttributes[Math.floor(MinerOneY/20)] [Math.floor(MinerOneX/20)] == 6.0)
+		{ 
+			IncResourceOH(CurCargo);
+			CurCargo = 0 ;
+			alertOnce = true;
+			alert("Minerals on Hand : "+ResourceOH);
+	
+		}
+	}else if (event.keyCode == 82) {
+	//Key R
+		MakeDropOff();
+		alert("Drop off Constructed");
+		
+	}
+}, true);
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+<script>
+
+</script>
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="720" height="720" onmousemove="mine(event)" ></canvas>
+
+</body>
+
+</html>
+	
+	

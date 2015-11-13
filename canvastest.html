@@ -1,0 +1,198 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aColor;			//vertex color
+attribute vec4 aPosition;       //vertex coordinate
+varying vec4 vColor;			//varying vertex color	
+void main()
+{
+	gl_Position = aPosition;
+	gl_PointSize 	= 7.0;
+	
+	vColor = aColor;	
+	}
+
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+varying vec4 vColor;
+void main()
+{
+    gl_FragColor = vColor; //use varying fragment color
+}
+
+</script>
+
+<script>
+
+var gl;
+var vertices;
+var colors;
+var count;
+var uColor;
+
+function main()
+{
+	//set up web gl
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+
+	//create color buffer and bind it
+    var colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+	
+	var aColor = gl.getAttribLocation(program, "aColor");
+    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aColor);
+	
+	colors = [];
+	vertices = [];
+	count = 0;
+	
+	//buffer vertices into vertex buffer
+	//connect to uniform uAngle
+
+    //canvas color is black, clear canvas
+	gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+	//Draw empty Canvas
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+	}
+	
+	
+	
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" onmousedown = "Toggle()" onmousemove = "AddPoint(event)" onmouseover = "AddPoint(event)"  onmouseout ="PrintmoreOFF()" width="500" height="500"></canvas>
+
+<!-- buttons to draw shapes -->
+<p>
+<button id="pointButton">points</button>
+<button id="lineButton">line</button>
+<button id="polygonButton">polygon</button>
+<button id="clearButton">clear</button>
+<br><br>
+0 <input id ="Rslider" type="range" min = "0" max ="255" step = "15" value = "0" onchange ="UpdateColor(event)" > 10<br>
+0 <input id ="Gslider" type="range" min = "0" max ="255" step = "15" value = "0" onchange ="UpdateColor(event)" > 10<br>
+0 <input id ="Bslider" type="range" min = "0" max ="255" step = "15" value = "0" onchange ="UpdateColor(event)" > 10<br>
+
+</p>
+
+<script>
+var R = 0.0;
+var G = 0.0 ;
+var B = 0.0 ;
+//event listener for mouse click
+var printmore = false;
+function AddPoint(event){
+
+	if( printmore == true){
+
+	 var y = 1 - 2*event.clientY/500;	//to standard view coordinates
+	 var x = 2 * event.clientX/500 - 1; //convert mouse click coordinates
+	
+	vertices.push(vec2(x,y));
+	colors.push(vec4(R,G,B,1.0));
+	
+	count = count + 1;
+	
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+	
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+	gl.drawArrays(gl.POINTS, 0, count);
+	}
+	
+}
+
+function UpdateColor(event){
+	 R = (document.getElementById("Rslider").value)/255.0;
+	 G = (document.getElementById("Gslider").value)/255.0;
+	 B = (document.getElementById("Bslider").value)/255.0;
+	 
+	 
+	
+
+}
+
+function Toggle(){
+	if(printmore == true)
+	printmore = false;
+	else
+	printmore = true;
+	
+}
+		
+
+function PrintmoreOFF(){
+	
+		printmore = false;
+}
+
+document.getElementById("pointButton").onclick = function(){
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+	gl.drawArrays(gl.POINTS, 0, count);
+};
+
+document.getElementById("lineButton").onclick = function(){
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+	gl.drawArrays(gl.LINE_STRIP, 0, count);
+};
+
+document.getElementById("polygonButton").onclick = function(){
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+	gl.drawArrays(gl.TRIANGLE_FAN, 0, count);
+};
+
+document.getElementById("clearButton").onclick = function(){
+	vertices = [];
+	colors = [];
+	count = 0;
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+};
+
+
+
+</script>
+
+</body>
+
+</html>

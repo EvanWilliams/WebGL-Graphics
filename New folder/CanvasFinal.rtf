@@ -1,0 +1,218 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;       //vertex coordinate		
+void main()
+{
+	gl_Position = aPosition;
+	gl_PointSize 	= 7.0;
+	//make pointsize large
+	
+	}
+
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+uniform vec4 uColor;
+void main()
+{
+    gl_FragColor = uColor; 
+	//use uniform fragment color
+}
+
+</script>
+
+<script>
+
+var gl;
+var vertices;
+//verticies array
+var count;
+// number of points
+var uColor;
+//color to pass to fragment shader
+
+function main()
+{
+	//set up web gl
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	vertices = [];
+	colors = [];
+	count = 0;
+	
+	uColor = gl.getUniformLocation(program, "uColor");
+	//buffer vertices into vertex buffer
+	//connect to uniform uAngle
+
+    //canvas color is black, clear canvas
+	gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+
+	//Draw empty Canvas
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+	}
+	
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" onmousedown = "Toggle()" 
+onmousemove = "AddPoint(event)" onmouseover = 
+"AddPoint(event)"  onmouseout ="PrintmoreOFF()"
+ width="500" height="500"></canvas>
+
+<!-- buttons to draw shapes -->
+<p>
+<button id="clearButton">clear</button>
+<br>
+Red<br>
+0 <input id ="Rslider" type="range" min = "0"
+ max ="255" step = "15" value = "5" 
+ onchange ="UpdateColor(event)" > 255<br>
+ <!-- Red slider -->
+Green<br>
+0 <input id ="Gslider" type="range" min = "0"
+ max ="255" step = "15" value = "5"
+ onchange ="UpdateColor(event)" > 255<br>
+  <!-- Green slider -->
+Blue<br>
+0 <input id ="Bslider" type="range" min = "0"
+ max ="255" step = "15" value = "5"
+ onchange ="UpdateColor(event)" > 255<br>
+  <!-- Blue slider -->
+
+</p>
+
+<script>
+	var	R = (document.getElementById("Rslider").value)/255.0;
+	//set R according to slider
+	var	G = (document.getElementById("Gslider").value)/255.0;
+	//set G according to slider
+	var	B = (document.getElementById("Bslider").value)/255.0;
+	//set B according to slider
+	
+//event listener for mouse click
+var printmore = false;
+function AddPoint(event){
+
+	if( printmore == true){
+	//if bool is true then create more points
+	//on mouseover
+	
+	UpdateColor();
+	//call update color to get current color
+
+	 var y = 1 - 2*event.clientY/500;	
+	 
+	 var x = 2 * event.clientX/500 - 1; 
+	 //convert mouse click coordinates
+	 //to standard view coordinates
+	
+	vertices.push(vec2(x,y));
+	//add point to vertices
+	colors.push(vec4(R,G,B,1.0));
+	//push corresponding color to 
+	//color array
+	
+	count = count + 1;
+	//increment point count
+	
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	//buffer vertices
+	
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	//clear screen
+	
+	for(var i = 0; i < count; i++){
+	//make each point the correct color
+	
+	gl.uniform4fv(uColor, flatten((colors[i])));
+	//change uniform every time a point is drawn
+	gl.drawArrays(gl.POINTS, i, 1);
+	}
+	
+	}
+	
+}
+
+function UpdateColor(event){
+	 R = (document.getElementById("Rslider").value)/255.0;
+	 //set R according to slider
+	 G = (document.getElementById("Gslider").value)/255.0;
+	 //set G according to slider
+	 B = (document.getElementById("Bslider").value)/255.0;
+	 //set B according to slider
+	 
+	 
+	
+
+}
+
+function Toggle(){
+	if(printmore == true)
+	//toggles the boolean printmore
+	printmore = false;
+	else
+	printmore = true;
+	
+}
+		
+
+function PrintmoreOFF(){
+	
+		printmore = false;
+	//sets printmore to off when the
+	//cursor is outside of the canvas
+}
+
+
+
+
+document.getElementById("clearButton").onclick = function(){
+//resets the arrays to null and count to 0
+	vertices = [];
+	colors = [];
+	count = 0;
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	//clear screen
+	
+};
+
+
+
+</script>
+
+</body>
+
+</html>

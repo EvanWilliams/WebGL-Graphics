@@ -1,0 +1,316 @@
+<!-- This program draws multiple shapes with different colors -->
+
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="init-shaders.js"></script>
+<script type="text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id="vertex-shader" type="x-shader/x-vertex">	
+attribute vec4 aPosition;      
+ //vertex coordinate		
+attribute vec4 aColor;			
+//vertex color	
+uniform float uVelocity;	
+//uniform uVelocity
+uniform float uOffset;
+//uniform uOffset
+uniform float uAngle;
+//uniform uAngle
+uniform float uTime;
+//uniform uTime
+uniform float uShape;
+//uniform  uShape
+varying vec4 vColor;			
+//varying vertex color
+void main()
+{
+	
+	if( uShape == 1.0){
+	//for only the ball
+    gl_Position.x = aPosition.x + uVelocity*uTime*cos(uAngle); 
+	//velocity function
+	gl_Position.y = aPosition.y + uVelocity*uTime*sin(uAngle) - 4.9*uTime*uTime;
+	//velocity function
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+	
+	gl_Position.x = gl_Position.x + 20.0+ uOffset;
+	gl_Position.y = gl_Position.y + 60.0;
+	//offset the ball so that it is
+	//on top of the grass and not clipped out
+	
+	gl_Position.x = 2.0 * gl_Position.x / 1200.0 - 1.0;   
+	 //scale x and y to 1200x600 canvas
+	gl_Position.y = 2.0 * gl_Position.y / 600.0 - 1.0;
+	
+	}
+	else
+	{
+	gl_Position.x = aPosition.x;
+	gl_Position.y = aPosition.y;
+	gl_Position.z = 0.0;
+	gl_Position.w = 1.0;
+	
+	gl_Position.x = gl_Position.x + 100.0;
+	gl_Position.y = gl_Position.y + 40.0;
+	//offset the rest of the scene so that it is
+	//on top of the grass and not clipped out
+	
+	gl_Position.x = 2.0 * gl_Position.x / 1200.0 - 1.0;    
+	gl_Position.y = 2.0 * gl_Position.y / 600.0 - 1.0;
+	//scale x and y to 1200x600 canvas
+	}
+	vColor = aColor;//pass through vertex color
+}
+</script>
+
+<!-- fragment shader -->
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;                     //medium float precision
+varying vec4 vColor;
+void main()
+{
+    gl_FragColor = vColor; //use varying fragment color
+}
+</script>
+
+<script>
+//main drawing function
+	var movedOnce = false;
+	//bool to make only one animation
+	var gl,uTime,uAngle,travelTime,offset;
+	//vars for uniform variables and
+	//travel time and an offset to position the ball
+	var velocity;
+	//velocity variable to pass to uVelocity
+	
+
+
+function main()
+{
+	var vertices = [];
+	//vertices array
+	var colors = [];
+	//color array
+	var xStart;
+	//size the hole should be
+	var xEnd;
+	//size the hole should be
+	var center;
+	//center point of the hole
+	
+	//set up WebGL
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+	
+	makeDisk(vertices,colors, 20, 100,vec3(1.0,1.0,1.0));
+	//make the ball(white)
+	colors.push(vec3(0.0, 0.0, 1.0),vec3(0.0, 0.0, 1.0),vec3(0.0, 0.0, 1.0),vec3(0.0, 0.0, 1.0),
+	//colors for the hole(blue)
+		  
+			 vec3(0.0, 0.75, 0.09),vec3(0.0, 0.75, 0.09),vec3(0.0, 0.75, 0.09),vec3(0.0, 0.75, 0.09));
+			 //the grass underneath the ball(green)
+	offset = Math.random()*500;
+	//determine the random offset of the ball 
+	//from 0 to 500
+	center = 600+Math.random()*500;//equals a value from
+	//600 to 1100 with a length of 80 centered from 640 to 1060
+	xStart = center-160;
+	//due to the vertex shader calulations this is the
+	//start of the hole
+	xEnd = center-80;
+	//due to the vertex shader calulations this is the
+	//end of the hole
+	
+	vertices.push(vec2(xStart,-40),vec2(xStart,0),vec2(xEnd,-40),vec2(xEnd,0));
+	//push randomized hole
+	vertices.push(vec2(-100,-40),vec2(-100,0),vec2(1100,-40),vec2(1100,0));
+	//push green
+
+    //create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	//buffer data
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	
+	//create color buffer
+	var colorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+	
+	//connect color buffer to attribute variable aColor
+	var aColor = gl.getAttribLocation(program, "aColor");
+    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aColor);
+	
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+	//buffer vertices into color buffer    
+    
+
+	
+	velocity = document.getElementById("velocitySlider").value;
+	//call velocity slider and set velocity to value
+	uVelocity = gl.getUniformLocation(program, "uVelocity");
+	//connect uVelocity
+	gl.uniform1f(uVelocity, velocity);
+	//set uVelocity
+	
+	
+	angle = document.getElementById("angleSlider").value;
+	//call angle slider and set angle to value
+	uShape = gl.getUniformLocation(program, "uShape");
+	//connect uShape
+	
+	uAngle = gl.getUniformLocation(program, "uAngle");
+	//connect uAngle
+	gl.uniform1f(uAngle, angle*Math.PI/180);
+	//set uAngle
+			
+			
+	uOffset= gl.getUniformLocation(program, "uOffset");
+	//connect uOffset
+	
+	travelTime = velocity*Math.sin(angle*Math.PI/180)/4.9;
+	//calculate travelTime
+	uTime = gl.getUniformLocation(program,"uTime");
+	//connect uTime
+	
+	time = 0.0;
+	//initalize time
+	
+ 
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	 //canvas color is black, clear canvas
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	
+	gl.uniform1f(uShape, 1.0);
+	//set uShape = 1.0 for the ball
+	gl.uniform1f(uOffset, offset);
+	//pass offset to uOffset
+	gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+	//draw the ball
+	gl.uniform1f(uShape, 2.0);
+	//set the uShape to 2.o for the rest of the scene
+	gl.drawArrays(gl.TRIANGLE_STRIP, 104, 4);
+	//draw grass
+	gl.drawArrays(gl.TRIANGLE_STRIP, 100, 4);
+	//draw hole
+	
+	
+	
+
+	}
+	
+	
+	function makeDisk(vertexArray,ColorArray, radius, count, color)
+	{
+		var theta = 2*Math.PI/count;				
+		//small angle
+		
+		for (var i = 0; i < count; i++)				
+		//generate points on a circle
+		{
+			var x = radius*Math.cos(i*theta);	
+			//x coordinate of pointer
+			var y = radius*Math.sin(i*theta);	
+			//y coordinate of pointer
+			
+			vertexArray.push(vec2(x,y));	
+			//push color
+			ColorArray.push(color);
+		}
+	
+	}
+	
+	function draw()
+	{
+		if(movedOnce==false){
+		//bool so that ball moves only once
+		time = time + 0.2;
+		//increment time
+		if(time > travelTime){
+		//once it has hit the ground
+		//set movedOnce to true
+			time = travelTime;
+			movedOnce = true;
+			}
+		
+		gl.uniform1f(uTime, time);
+		
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		//clearscreen
+		gl.uniform1f(uShape, 1.0);
+		//set uShape = 1.0 for the ball
+		gl.drawArrays(gl.TRIANGLE_FAN, 0, 100);
+		//draw ball
+		gl.uniform1f(uShape, 2.0);
+		//set the uShape to 2.o for the rest of the scene
+		gl.drawArrays(gl.TRIANGLE_STRIP, 104, 4);
+		//draw grass
+		gl.drawArrays(gl.TRIANGLE_STRIP, 100, 4);
+		//draw hole
+		
+		
+		
+		
+		requestAnimationFrame(draw);
+	
+		}
+	}
+	
+	function setVelocity(){
+		velocity = document.getElementById("velocitySlider").value;
+		//set velocity to velocity slider.value
+		travelTime = velocity*Math.sin(angle*Math.PI/180)/4.9;
+		//recalculate velocity 
+		gl.uniform1f(uVelocity, velocity);
+		//pass velocity to uVelocity
+		
+			}
+
+	function setAngle(){
+		angle = document.getElementById("angleSlider").value;
+		//set angle to angle slider.value
+		travelTime = velocity*Math.sin(angle*Math.PI/180)/4.9;
+		//recalculate velocity 
+		gl.uniform1f(uAngle, angle*Math.PI/180);
+		//pass velocity to uVelocity
+		}
+	
+</script>
+
+</head>
+
+<!-- draw scene -->
+<body onload="main()">
+
+<!-- canvas for drawing scene -->
+<canvas id="gl-canvas" width="1200" height="550"></canvas>
+
+<p>
+<button id="startButton" onmousedown="draw()">Hit</button>
+<br>Velocity<br>
+0 <input id ="velocitySlider" type="range" min = "0" max ="100" step = "1" value = "75" onchange ="setVelocity()" > 100<br>
+Angle<br>
+0 <input id ="angleSlider" type="range" min = "0" max ="90" step = "1" value = "5" onchange ="setAngle()" > 90<br>
+</p>
+
+
+</body>
+
+</html>
