@@ -1,0 +1,237 @@
+<!-- This program draws a cube with ambient, diffuse, specular reflections -->
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type = "text/javascript" src="webgl-utils.js"></script>
+<script type = "text/javascript" src="init-shaders.js"></script>
+<script type = "text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id = "vertex-shader" type="x-shader/x-vertex">
+attribute vec4 aPosition; 		//vertex coordinate
+attribute vec3 aNormal;			//normal at vertex
+
+uniform mat4 uModelMatrix;		//model Matrix
+uniform mat4 uViewMatrix;		//view Matrix
+uniform mat4 uProjectMatrix;	//projection matrix
+uniform mat3 uNormalMatrix;		//normal matrix
+
+uniform vec3 uLightLocation;	//light location
+uniform vec3 uAmbientLight;		//ambient light
+uniform vec3 uDiffuseLight;		//diffuse light
+uniform vec3 uSpecularLight;	//specular light
+uniform vec3 uAmbientReflect;	//ambient Reflect
+uniform vec3 uDiffuseReflect;	//uDiffuse Reflect
+uniform vec3 uSpecularReflect;	//uSpecularReflect
+uniform float uAlpha;			//shine coefficient
+
+varying vec4 vColor;				//vertex color
+
+void main(){
+
+	gl_Position = uProjectMatrix*uViewMatrix*uModelMatrix*aPosition;
+
+//ambient color
+	vec3 ambient = uAmbientLight* uAmbientReflect;
+
+//diffuse color
+	vec3 light = normalize((uViewMatrix*vec4(uLightLocation, 1.0)).xyz -
+			(uViewMatrix*uModelMatrix*aPosition).xyz);
+			
+	vec3 normal = normalize(uNormalMatrix*aNormal);
+	float diffuseWeight = max(dot(normal,light),0.0);
+	vec3 diffuse = diffuseWeight*(uDiffuseLight*uDiffuseReflect);
+
+//specular color
+ 
+ vec3 reflectLight = normalize(reflect(-light, normal));//reflect vector
+ vec3 viewer = normalize(-(uViewMatrix*uModelMatrix*aPosition).xyz);//viewer
+ float specularWeight = pow(max(dot(reflectLight, viewer), 0.0), uAlpha);
+ vec3 specular = specularWeight*(uSpecularLight*uSpecularReflect);
+ 
+ //check light and viewer are on normal side
+ if(dot(normal,light) < 0.0 || dot(normal,viewer) < 0.0)
+		specular = vec3(0.0,0.0,0.0);
+		
+//total color
+	vec3 color = ambient + diffuse + specular;
+	vColor = vec4(color,1.0);
+	}
+	
+</script>
+
+<!-- fragment shader -->
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;		//medium precision float
+varying vec4 vColor;
+
+void main(){
+	gl_FragColor = vColor;
+}
+</script>
+
+<script>
+var gl;
+//main
+function main()
+{
+//set up webgl
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+	
+	
+	
+	var vertices = [];
+	var normals = [];
+	makeCube(vertices, normals);
+	
+	//create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	//buffer verticies
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	
+	//create normal buffer and bind it
+    var normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+	
+	//connect vertex bufffer to attribute variable aPosition
+    var aNormal = gl.getAttribLocation(program, "aNormal");
+    gl.vertexAttribPointer(aNormal, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aNormal);
+	
+	
+	//buffer verticies
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(normals), gl.STATIC_DRAW);
+	
+	
+	
+	//view parameters
+	var eye = vec3(3,4,2);
+	var at = vec3(0,0,0);
+	var up =vec3(0,1,0);
+
+	//orthogonal projection parameters
+	var width = 5;
+	var height = 5;
+	var near = 1;
+	var far = 50;
+	
+	var uViewMatrix = gl.getUniformLocation(program, "uViewMatrix");
+	var matrix1 = lookat(eye,at,up);
+	gl.uniformMatrix4fv(uViewMatrix, false, flatten(matrix1));
+	
+	var uProjectMatrix = gl.getUniformLocation(program,"uProjectMatrix");
+	var matrix2 = orthogonal(width, height, near, far);
+	gl.uniformMatrix4fv(uProjectMatrix,false, flatten(matrix2));
+	
+	var uModelMatrix = gl.getUniformLocation(program, "uModelMatrix");
+	var matrix3 = identity();
+	gl.uniformMatrix4fv(uModelMatrix,false, flatten(matrix3));
+	
+	var uNormalMatrix = gl.getUniformLocation(program, "uNormalMatrix");
+	var matrix4 = makeNormalMatrix(multiply(matrix1,matrix3));
+	gl.uniformMatrix3fv(uNormalMatrix,false, flatten(matrix4));
+
+	
+	
+	//light location
+	var lightLocation = vec3(0,5,3);
+	var ambientLight = vec3(1.0,1.0,1.0);
+	var diffuseLight = vec3(1.0,1.0,1.0);
+	var specularLight = vec3(1.0,1.0,1.0);
+	var ambientReflect = vec3(0.0,0.2,0.0);
+	var diffuseReflect = vec3(0.0,0.2,0.0);
+	var specularReflect = vec3(0.0,0.7,0.0);
+	var alpha = 1.0;
+	
+	var uLightLocation = gl.getUniformLocation(program, "uLightLocation");
+	var uAmbientLight = gl.getUniformLocation(program, "uAmbientLight");
+	var uDiffuseLight = gl.getUniformLocation(program, "uDiffuseLight");
+	var uSpecularLight = gl.getUniformLocation(program, "uSpecularLight");
+	var uAmbientReflect = gl.getUniformLocation(program, "uAmbientReflect");
+	var uDiffuseReflect = gl.getUniformLocation(program, "uDiffuseReflect");
+	var uSpecularReflect = gl.getUniformLocation(program, "uSpecularReflect");
+	var uAlpha = gl.getUniformLocation(program, "uAlpha");
+	
+	
+	gl.uniform3fv(uLightLocation, flatten(lightLocation));
+	gl.uniform3fv(uAmbientLight, flatten(ambientLight));
+	gl.uniform3fv(uDiffuseLight, flatten(diffuseLight));
+	gl.uniform3fv(uSpecularLight, flatten(specularLight));
+	gl.uniform3fv(uAmbientReflect, flatten(ambientReflect));
+	gl.uniform3fv(uDiffuseReflect, flatten(diffuseReflect));
+	gl.uniform3fv(uSpecularReflect, flatten(specularReflect));
+	gl.uniform1f(uAlpha,alpha);
+	
+	//set viewport
+	gl.viewport(0,0,canvas.width,canvas.height);
+	
+	//canvas color is black
+	gl.clearColor(0.0,0.0,0.0,1.0);
+	
+	//enable depth test
+	gl.enable(gl.DEPTH_TEST);
+	
+	//clear color buffer
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	
+	gl.drawArrays(gl.TRIANGLES, 0, 36);
+	}
+	
+	
+	
+
+function makeCube(vertexArray,normalArray)
+	//make cube
+	{
+	var v1 = vec3(-1,1,1),v2 = vec3(1,1,1),
+		v3 = vec3(1,-1,1),v4 = vec3(-1,-1,1),
+		v5 = vec3(-1,1,-1),v6 = vec3(1,1,-1),
+		v7 = vec3(1,-1,-1),v8 = vec3(-1,-1,-1);
+		
+	var n1 = vec3(0,0,1), n2 = vec3(0,1,0),
+		n3 = vec3(1,0,0), n4 = vec3(0,0,-1),
+		n5 = vec3(0,-1,0), n6 = vec3(-1,0,0);
+		
+		
+	vertexArray.push(v1, v2, v3, v1, v3, v4,
+					 v1, v5, v6, v1, v6, v2,
+					 v2, v6, v7, v2, v7, v3,
+					 v5, v6, v7, v5, v7, v8,
+					 v4, v8, v7, v4, v7, v3,
+					 v1, v5, v8, v1, v8, v4);
+					 
+	normalArray.push(n1, n1, n1, n1, n1, n1,
+					 n2, n2, n2, n2, n2, n2,
+					 n3, n3, n3, n3, n3, n3,
+					 n4, n4, n4, n4, n4, n4,
+					 n5, n5, n5, n5, n5, n5,
+					 n6, n6, n6, n6, n6, n6);	
+	}
+	
+</script>
+
+</head>
+
+<body onload="main()">
+
+<canvas id="gl-canvas" width="500" height="500"></canvas>
+
+</body>
+
+</html>
+	

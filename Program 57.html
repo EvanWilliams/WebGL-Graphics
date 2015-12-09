@@ -1,0 +1,270 @@
+<!-- This program draws a cube with ambient, diffuse, specular reflections -->
+<html>
+
+<head>
+
+<!-- script files for webgl set up and math operations -->
+<script type = "text/javascript" src="webgl-utils.js"></script>
+<script type = "text/javascript" src="init-shaders.js"></script>
+<script type = "text/javascript" src="math.js"></script>
+
+<!-- vertex shader -->
+<script id = "vertex-shader" type="x-shader/x-vertex">
+attribute vec4 aPosition; 		//vertex coordinate
+attribute vec3 aNormal;			//normal at vertex
+attribute vec2 aTexCoord;
+
+uniform mat4 uModelMatrix;		//model Matrix
+uniform mat4 uViewMatrix;		//view Matrix
+uniform mat4 uProjectMatrix;	//projection matrix
+uniform mat3 uNormalMatrix;	//normal matrix
+
+uniform vec3 uLightLocation;	//light location
+uniform vec3 uAmbient;			//ambient light
+uniform vec3 uDiffuse;			//diffuse light
+uniform vec3 uSpecular;			//specular light
+
+varying vec4 vColor;			//varying color
+varying vec2 vTexCoord;			//varying texture coordinate
+
+void main()
+{
+	gl_Position = uProjectMatrix*uViewMatrix*uModelMatrix*aPosition;
+	
+	vTexCoord = aTexCoord;
+	
+	vec3 ambient = uAmbient;
+	
+	vec3 light = normalize((uViewMatrix*vec4(uLightLocation, 1.0)).xyz -(uViewMatrix*uModelMatrix*aPosition).xyz);
+			
+	vec3 normal = normalize(uNormalMatrix*aNormal);
+	
+	float diffuseWeight = max(dot(normal,light),0.0);
+	vec3 diffuse = diffuseWeight*uDiffuse;
+	
+	//specular color
+	vec3 reflectLight = normalize(reflect(-light, normal));//reflect vector
+	vec3 viewer = normalize(-(uViewMatrix*uModelMatrix*aPosition).xyz);//viewer
+	float specularWeight = pow(max(dot(reflectLight, viewer), 0.0), 1.0);
+	vec3 specular = specularWeight*uSpecular;
+	
+	if(dot(normal,light) < 0.0 || dot(normal, viewer) < 0.0)
+		specular = vec3(0.0,0.0,0.0);
+		
+	//total color
+	vec3 color = ambient + diffuse + specular;
+	vColor = vec4(color, 1.0);
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;		//meduim float Precision
+uniform sampler2D uTexture;
+varying vec2 vTexCoord;			//varying color
+varying vec4 vColor;
+void main()
+{	
+	gl_FragColor = vColor*texture2D(uTexture, vTexCoord);		//color fragment
+}
+</script>
+
+
+<script>
+var gl;
+
+function main(){
+//set up webgl
+	var canvas = document.getElementById("gl-canvas");
+    gl = WebGLUtils.setupWebGL(canvas);
+    
+    //set up shaders
+    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    gl.useProgram(program);
+	
+	
+	var vertices = [];
+	var normals =  [];
+	var textureCoordinates = [];
+	makeCube(vertices, normals, textureCoordinates);
+	
+	//create vertex buffer and bind it
+    var vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+    //connect vertex bufffer to attribute variable aPosition
+    var aPosition = gl.getAttribLocation(program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+	
+	//buffer verticies
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	
+	//create normal buffer and bind it
+    var normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+	
+	//connect vertex bufffer to attribute variable aPosition
+    var aNormal = gl.getAttribLocation(program, "aNormal");
+    gl.vertexAttribPointer(aNormal, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aNormal);
+	
+	
+	//buffer verticies
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(normals), gl.STATIC_DRAW);
+	
+	//create normal buffer and bind it
+    var textureBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
+	
+	//connect vertex bufffer to attribute variable aPosition
+    var aTexCoord = gl.getAttribLocation(program, "aTexCoord");
+    gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aTexCoord);
+	
+	
+	//buffer verticies
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(textureCoordinates), gl.STATIC_DRAW);
+	
+	//    hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+	//view parameters
+	var eye = vec3(3,4,5);
+	var at = vec3(0,0,0);
+	var up =vec3(0,1,0);
+
+	//orthogonal projection parameters
+	var width = 5;
+	var height = 5;
+	var near = 1;
+	var far = 50;
+	
+	var uViewMatrix = gl.getUniformLocation(program, "uViewMatrix");
+	var martix1 = lookat(eye,at,up);
+	gl.uniformMatrix4fv(uViewMatrix, false, flatten(martix1));
+	
+	var uProjectMatrix = gl.getUniformLocation(program,"uProjectMatrix");
+	var matrix2 = orthogonal(width, height, near, far);
+	gl.uniformMatrix4fv(uProjectMatrix,false, flatten(matrix2));
+	
+	var uModelMatrix = gl.getUniformLocation(program, "uModelMatrix");
+	var matrix3 = identity();
+	gl.uniformMatrix4fv(uModelMatrix,false, flatten(matrix3));
+	
+	var uNormalMatrix = gl.getUniformLocation(program, "uNormalMatrix");
+	var matrix5 = multiply(lookat(eye,at,up),matrix3);
+	var matrix4 = makeNormalMatrix(matrix5);
+	gl.uniformMatrix3fv(uNormalMatrix,false, flatten(matrix4));
+	
+
+	//light parameters
+	
+	//light location
+	var lightLocation = vec3(0,5,3);
+	var ambient = vec3(0.3,0.3,0.3);
+	var diffuse = vec3(0.5,0.5,0.5);
+	var specular = vec3(0.4,0.4,0.4);
+	
+	var uLightLocation = gl.getUniformLocation(program, "uLightLocation");
+	var uAmbient = gl.getUniformLocation(program, "uAmbient");
+	var uDiffuse = gl.getUniformLocation(program, "uDiffuse");
+	var uSpecular = gl.getUniformLocation(program, "uSpecular");
+	
+	gl.uniform3fv(uLightLocation, flatten(lightLocation));
+	gl.uniform3fv(uAmbient, flatten(ambient));
+	gl.uniform3fv(uDiffuse, flatten(diffuse));
+	gl.uniform3fv(uSpecular, flatten(specular));
+	
+	//set viewport
+	gl.viewport(0,0,canvas.width,canvas.height);
+	
+	//canvas color is black
+	gl.clearColor(0.0,0.0,0.0,1.0);
+	
+	//enable depth test
+	gl.enable(gl.DEPTH_TEST);
+	
+	var image = new Image();
+	
+	image.onload = function() {loadTexture(image);};
+	
+	image.src = "texture2.jpg";
+
+}
+
+function loadTexture(image)
+{
+
+	var texture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	
+	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB,gl.RGB,gl.UNSIGNED_BYTE, image);
+	
+	var uTexture = gl.getUniformLocation(gl.program,"uTexture");
+	gl.uniform1i(uTexture, 0);
+	
+	draw();
+	
+	}
+	
+	function draw()
+	{
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		
+		gl.drawArrays(gl.TRIANGLES, 0, 36);
+	
+		requestAnimationFrame(draw);
+	}
+	
+	function makeCube(vertexArray,normalArray, textureArray)
+	//make cube
+	{
+	var v1 = vec3(-1,1,1),v2 = vec3(1,1,1),
+		v3 = vec3(1,-1,1),v4 = vec3(-1,-1,1),
+		v5 = vec3(-1,1,-1),v6 = vec3(1,1,-1),
+		v7 = vec3(1,-1,-1),v8 = vec3(-1,-1,-1);
+		
+	var n1 = vec3(0,0,1), n2 = vec3(0,1,0),
+		n3 = vec3(1,0,0), n4 = vec3(0,0,-1),
+		n5 = vec3(0,-1,0), n6 = vec3(-1,0,0);
+		
+	var t1 = vec2(0.0,0.0), t2 = vec2(0.0,1.0),
+		t3 = vec2(1.0,1.0), t4 = vec2(1.0,0.0)
+		
+	vertexArray.push(v1, v2, v3, v1, v3, v4,
+					 v1, v5, v6, v1, v6, v2,
+					 v2, v6, v7, v2, v7, v3,
+					 v5, v6, v7, v5, v7, v8,
+					 v4, v8, v7, v4, v7, v3,
+					 v1, v5, v8, v1, v8, v4);
+					 
+	normalArray.push(n1, n1, n1, n1, n1, n1,
+					 n2, n2, n2, n2, n2, n2,
+					 n3, n3, n3, n3, n3, n3,
+					 n4, n4, n4, n4, n4, n4,
+					 n5, n5, n5, n5, n5, n5,
+					 n6, n6, n6, n6, n6, n6);	
+					 
+	textureArray.push(t1, t2, t3, t1, t3, t4,
+					  t1, t2, t3, t1, t3, t4,
+					  t1, t2, t3, t1, t3, t4,
+					  t1, t2, t3, t1, t3, t4,
+					  t1, t2, t3, t1, t3, t4,
+					  t1, t2, t3, t1, t3, t4);	
+	}
+	
+	
+
+
+
+</script>
+</head>
+
+<body onload="main()">
+
+<canvas id="gl-canvas" width="500" height="500"></canvas>
+
+</body>
+
+</html>
